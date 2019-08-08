@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="YQCircleView">
+        <attr name="cv_start_color" format="color|reference"/>
+        <attr name="cv_end_color" format="color|reference"/>
+        <attr name="cv_paint_width" format="integer"/>
+        <attr name="cv_bg_color" format="color|reference"/>
+    </declare-styleable>
+</resources>
