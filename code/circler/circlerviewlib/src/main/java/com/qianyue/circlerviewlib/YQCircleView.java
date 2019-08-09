@@ -106,13 +106,23 @@ public class YQCircleView extends View {
      */
     private int scale;
 
+    /**
+     * 最大范围
+     */
+    private int max;
+
+    /**
+     * 平均值
+     */
+    private float average;
+
 
     public YQCircleView(Context context) {
         super(context);
     }
 
     public YQCircleView(Context context, @Nullable AttributeSet attrs) {
-        this(context, attrs,0);
+        this(context, attrs, 0);
     }
 
     public YQCircleView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
@@ -123,19 +133,21 @@ public class YQCircleView extends View {
     /**
      * 初始化 画笔等工具
      */
-    private void init(Context context, @Nullable AttributeSet attrs){
-        TypedArray typedArray = context.obtainStyledAttributes(attrs,R.styleable.YQCircleView);
+    private void init(Context context, @Nullable AttributeSet attrs) {
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.YQCircleView);
         int startFrontColor = typedArray.getColor(R.styleable.YQCircleView_cv_start_color, Color.parseColor("#F5EF72"));
         int endFrontColor = typedArray.getColor(R.styleable.YQCircleView_cv_end_color, Color.parseColor("#FEFEF6"));
-        paintWidth = typedArray.getInteger(R.styleable.YQCircleView_cv_paint_width,50);
-        int bgPaintColor =  typedArray.getColor(R.styleable.YQCircleView_cv_bg_color, Color.parseColor("#80888888"));
+        paintWidth = typedArray.getInteger(R.styleable.YQCircleView_cv_paint_width, 50);
+        int bgPaintColor = typedArray.getColor(R.styleable.YQCircleView_cv_bg_color, Color.parseColor("#80888888"));
+        max = typedArray.getInteger(R.styleable.YQCircleView_cv_max, 10);
+        average = 180.0f / max;
         typedArray.recycle();
 
         // 需禁用硬件加速
         setLayerType(LAYER_TYPE_SOFTWARE, null);
 
         // 颜色集合
-        frontColors = new int[]{startFrontColor,endFrontColor,startFrontColor};
+        frontColors = new int[]{startFrontColor, endFrontColor, startFrontColor};
 
         // 前景画笔初始化
         frontPaint = new Paint();
@@ -150,7 +162,7 @@ public class YQCircleView extends View {
         // 画笔样式
         frontPaint.setStyle(Paint.Style.STROKE);
         // 发光特效
-        paintBeam(frontPaint,10f);
+        paintBeam(frontPaint, 10f);
 
         // ------------------- bg paint -------------------- //
 
@@ -169,7 +181,7 @@ public class YQCircleView extends View {
         // 画笔颜色
         bgPaint.setColor(bgPaintColor);
         // 发光特效
-        paintBeam(bgPaint,10f);
+        paintBeam(bgPaint, 10f);
 
     }
 
@@ -180,36 +192,36 @@ public class YQCircleView extends View {
         this.viewHeight = h;
         this.radiusCx = w / 2;
         this.radiusCy = h / 2;
-        this.radius = Math.min(radiusCx,radiusCy);
+        this.radius = Math.min(radiusCx, radiusCy);
         this.radiusMin = radius - paintWidth;
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         // 初始化画板
-        if (bitmap == null){
-            bitmap = Bitmap.createBitmap(getWidth(),getHeight(), Bitmap.Config.ARGB_8888);
+        if (bitmap == null) {
+            bitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
             this.canvas = new Canvas(bitmap);
-            drawBgArc(canvas,180,180);
-            drawFrontArc(canvas,180,18);
+            drawBgArc(canvas, 180, 180);
+            drawFrontArc(canvas, 180, average);
         }
-        canvas.drawBitmap(bitmap,0,0,null);
+        canvas.drawBitmap(bitmap, 0, 0, null);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getAction();
-        switch (action){
+        switch (action) {
             case MotionEvent.ACTION_DOWN:
-                touchRange(event.getX(),event.getY());
+                touchRange(event.getX(), event.getY());
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (isMove){
+                if (isMove) {
                     canvas.drawColor(0, PorterDuff.Mode.CLEAR); // 画布清理
-                    drawBgArc(canvas,180,180);
-                    drawFrontArcRange(event.getX(),event.getY());
+                    drawBgArc(canvas, 180, 180);
+                    drawFrontArcRange(event.getX(), event.getY());
                     scale = scalesChange();
-                    Log.v("scale==","scale" + scale);
+                    Log.v("scale==", "scale" + scale);
                     if (listener != null)
                         listener.onScaleChange(scale);
                     invalidate();
@@ -219,10 +231,10 @@ public class YQCircleView extends View {
                 if (isMove) {
                     isMove = false;
                     canvas.drawColor(0, PorterDuff.Mode.CLEAR); // 画布清理
-                    drawBgArc(canvas,180,180);
-                    drawFrontArc(canvas,180,scale * 18);
-                    Log.v("result= 刻度值",scale * 18 +"");
-                    if (listener != null){
+                    drawBgArc(canvas, 180, 180);
+                    drawFrontArc(canvas, 180, scale >= max ? 180 : scale * average);
+                    Log.v("result= 刻度值", scale * average + "");
+                    if (listener != null) {
                         listener.onScaleChange(scale);
                         listener.onScaleFinish();
                     }
@@ -230,17 +242,17 @@ public class YQCircleView extends View {
                 }
                 break;
             case MotionEvent.ACTION_CANCEL: // 事件 被上层拦截时触发。
-                if (isMove){
+                if (isMove) {
                     isMove = false;
                     canvas.drawColor(0, PorterDuff.Mode.CLEAR); // 画布清理
-                    drawBgArc(canvas,180,180);
-                    drawFrontArc(canvas,180,scale * 18);
-                    if (listener != null){
+                    drawBgArc(canvas, 180, 180);
+                    drawFrontArc(canvas, 180, scale >= max ? 180 : scale * average);
+                    if (listener != null) {
                         listener.onScaleChange(scale);
                         listener.onScaleFinish();
                     }
                     invalidate(); // 刷新布局
-                    Log.v("result= 取消触发",currentAngle + "");
+                    Log.v("result= 取消触发", currentAngle + "");
                 }
 
                 break;
@@ -253,74 +265,75 @@ public class YQCircleView extends View {
     /**
      * ============================ 设置刻度 =========================
      */
-    public void setScale(int scale){
+    public void setScale(int scale) {
         if (bitmap == null) {
             bitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
             this.canvas = new Canvas(bitmap);
         }
         canvas.drawColor(0, PorterDuff.Mode.CLEAR); // 画布清理
-        drawBgArc(canvas,180,180);
+        drawBgArc(canvas, 180, 180);
         if (scale <= 0)
             scale = 1;
-        if (scale > 10)
+        if (scale > max)
             scale = 10;
         this.scale = scale;
         if (listener != null)
             listener.onScaleChange(this.scale);
-        drawFrontArc(canvas,180,scale * 18);
+        drawFrontArc(canvas, 180, scale == max ? 180 : scale * 18);
         invalidate();
     }
 
     /**
      * 滑动条颜色
      */
-    public void setFrontColors(int[] colos){
+    public void setFrontColors(int[] colos) {
         frontColors = colos;
     }
 
-    public void setOnScaleListener(OnScaleListener listener){
+    public void setOnScaleListener(OnScaleListener listener) {
         this.listener = listener;
     }
 
     /**
      * ================================ 画笔范围 ================================
      */
-    protected void drawFrontArcRange(float cx,float cy){
+    protected void drawFrontArcRange(float cx, float cy) {
         oldAngle = currentAngle;
-        currentAngle = calcAngle(cx,cy);
-        Log.v("mmmmm","角度=" + currentAngle);
-        if (currentAngle <18)
-            currentAngle = 18;
+        currentAngle = calcAngle(cx, cy);
+        Log.v("mmmmm", "角度=" + currentAngle);
+        if (currentAngle < average)
+            currentAngle = average;
         if (currentAngle > 270)
-            currentAngle = 18;
-        if (currentAngle >180)
+            currentAngle = average;
+        if (currentAngle > 180)
             currentAngle = 180;
-        Log.v("mmmmm","角度2=" + currentAngle);
-        drawFrontArc(canvas,180,currentAngle);
+        Log.v("mmmmm", "角度2=" + currentAngle);
+        drawFrontArc(canvas, 180, currentAngle);
     }
 
     /**
      * 刻度
+     *
      * @return
      */
-    protected int scalesChange(){
+    protected int scalesChange() {
         BigDecimal one = new BigDecimal(currentAngle);
-        BigDecimal two = new BigDecimal(18);
-        int result = one.divide(two,0, BigDecimal.ROUND_DOWN).intValue();
-        Log.v("result=总=","===" + result + "===" + currentAngle);
+        BigDecimal two = new BigDecimal(average);
+        int result = one.divide(two, 0, BigDecimal.ROUND_DOWN).intValue();
+        Log.v("result=总=", "===" + result + "===" + currentAngle);
         if (oldAngle > currentAngle) {  // 往回退的
-            Log.v("result=回退=",result +"");
+            Log.v("result=回退=", result + "");
             return result;
-        }else if(oldAngle < currentAngle){ // 前进
-            if (result != 10) {
-                Log.v("result=前进=",result +"");
+        } else if (oldAngle < currentAngle) { // 前进
+            if (result < max) {
+                Log.v("result=前进=", result + "");
                 return result + 1;
-            }else {
-                Log.v("result=前进10=",result +"");
+            } else {
+                Log.v("result=前进10=", result + "");
                 return result;
             }
-        }else{
-            Log.v("result=相等=",result +"");
+        } else {
+            Log.v("result=相等=", result + "");
             return result;
         }
     }
@@ -332,24 +345,24 @@ public class YQCircleView extends View {
     /**
      * 判断手指是否在范围中滑动
      */
-    protected void touchRange(float cx,float cy){
-        double mX = Math.pow((cx - radiusCx),2); // x的y次方
-        double mY = Math.pow((cy - radiusCy),2);
+    protected void touchRange(float cx, float cy) {
+        double mX = Math.pow((cx - radiusCx), 2); // x的y次方
+        double mY = Math.pow((cy - radiusCy), 2);
         double dotTodot = Math.abs(Math.sqrt(mX + mY)); // 两点间的距离
         BigDecimal dot = new BigDecimal(dotTodot);
         BigDecimal min = new BigDecimal(radiusMin);
         BigDecimal max = new BigDecimal(radius);
         int one = dot.compareTo(min);
         int two = dot.compareTo(max);
-        if (one != -1 && two != 1){ // 手指在范围中滑动
+        if (one != -1 && two != 1) { // 手指在范围中滑动
             isMove = true; // 可以滑动
             canvas.drawColor(0, PorterDuff.Mode.CLEAR); // 画布清理
-            drawBgArc(canvas,180,180);
-            drawFrontArcRange(cx,cy);
+            drawBgArc(canvas, 180, 180);
+            drawFrontArcRange(cx, cy);
             scale = scalesChange();
             if (listener != null)
                 listener.onScaleStart();
-        }else{
+        } else {
             isMove = false; // 不可以滑动
         }
     }
@@ -377,7 +390,7 @@ public class YQCircleView extends View {
                 }
             } else { // 3 or 4
                 if (y >= 0) { // 3
-                    radian = 2* Math.PI - Math.atan(tan);
+                    radian = 2 * Math.PI - Math.atan(tan);
                 } else { // 4
                     radian = Math.atan(tan);
                 }
@@ -400,50 +413,52 @@ public class YQCircleView extends View {
     /**
      * 前景画笔圆弧 效果
      */
-    protected void drawFrontArc(Canvas canvas, float startAngle, float sweepAngle){
+    protected void drawFrontArc(Canvas canvas, float startAngle, float sweepAngle) {
         int mRadius = radius - paintWidth;
         RectF rectF = new RectF();
         rectF.left = radiusCx - mRadius;
         rectF.top = radiusCy - mRadius;
         rectF.right = radiusCx + mRadius;
         rectF.bottom = radiusCy + mRadius;
-        paintGradient(frontPaint,frontColors,radiusCx,radiusCy);
-        canvas.drawArc(rectF,startAngle,sweepAngle,false,frontPaint);
+        paintGradient(frontPaint, frontColors, radiusCx, radiusCy);
+        canvas.drawArc(rectF, startAngle, sweepAngle, false, frontPaint);
     }
 
 
     /**
      * 背景画笔圆弧 效果
      */
-    protected void drawBgArc(Canvas canvas, float startAngle, float sweepAngle){
+    protected void drawBgArc(Canvas canvas, float startAngle, float sweepAngle) {
         int mRadius = radius - paintWidth;
         RectF rectF = new RectF();
         rectF.left = radiusCx - mRadius;
         rectF.top = radiusCy - mRadius;
         rectF.right = radiusCx + mRadius;
         rectF.bottom = radiusCy + mRadius;
-        canvas.drawArc(rectF,startAngle,sweepAngle,false,bgPaint);
+        canvas.drawArc(rectF, startAngle, sweepAngle, false, bgPaint);
     }
 
     /**
      * SweepGradient 扫描/梯度/扇形渐变
      * 扇形渐变
+     *
      * @param mPaint 画笔
      * @param colors 渐变色数组
-     * @param cx 中心点x
-     * @param cy 中心点y
+     * @param cx     中心点x
+     * @param cy     中心点y
      */
-    protected void paintGradient(Paint mPaint, int[] colors, float cx, float cy){
-        SweepGradient sweepGradient = new SweepGradient(cx, cy,colors,null);
+    protected void paintGradient(Paint mPaint, int[] colors, float cx, float cy) {
+        SweepGradient sweepGradient = new SweepGradient(cx, cy, colors, null);
         mPaint.setShader(sweepGradient);
     }
 
     /**
      * blurMaskFilter 发光
+     *
      * @param mPaint 画笔
      * @param radius he radius to extend the blur from the original mask. Must be > 0.
      */
-    protected void paintBeam(Paint mPaint, float radius){
+    protected void paintBeam(Paint mPaint, float radius) {
         BlurMaskFilter blurMaskFilter = new BlurMaskFilter(radius, BlurMaskFilter.Blur.SOLID);
         mPaint.setMaskFilter(blurMaskFilter);
     }
